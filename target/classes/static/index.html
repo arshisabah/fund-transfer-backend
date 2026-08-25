@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banking API Console</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#12181f;
+    --panel-2:#161d26;
+    --border:#22303c;
+    --text:#dbe4ec;
+    --text-dim:#7c8b99;
+    --accent:#3ddc97;
+    --accent-dim:#1f5c44;
+    --get:#4fa3ff;
+    --post:#3ddc97;
+    --put:#f5b942;
+    --danger:#ff6b6b;
+    --mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.5;
+  }
+  header{
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    background:var(--panel);
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  header h1{
+    font-size:14px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--accent);
+    white-space:nowrap;
+  }
+  header .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 6px var(--accent);
+    display:inline-block;
+    margin-right:8px;
+  }
+  .base-url-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1;
+    min-width:260px;
+  }
+  .base-url-wrap label{
+    color:var(--text-dim);
+    font-size:11px;
+    white-space:nowrap;
+  }
+  .base-url-wrap input{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:7px 10px;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:12px;
+  }
+  .base-url-wrap input:focus{outline:none;border-color:var(--accent);}
+  .ping{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+    padding:6px 10px;
+    border:1px solid var(--border);
+    border-radius:4px;
+    cursor:pointer;
+    background:var(--panel-2);
+  }
+  .ping:hover{border-color:var(--accent);color:var(--accent);}
+
+  main{
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:0;
+    height:calc(100vh - 57px);
+  }
+  nav{
+    border-right:1px solid var(--border);
+    overflow-y:auto;
+    background:var(--panel);
+  }
+  .group-title{
+    padding:12px 16px 6px;
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    border-top:1px solid var(--border);
+  }
+  .group-title:first-child{border-top:none;}
+  .endpoint-btn{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    color:var(--text);
+    padding:9px 16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--mono);
+    font-size:12px;
+    border-left:3px solid transparent;
+  }
+  .endpoint-btn:hover{background:var(--panel-2);}
+  .endpoint-btn.active{background:var(--panel-2);border-left-color:var(--accent);}
+  .method-tag{
+    font-size:10px;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:3px;
+    min-width:38px;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .method-tag.GET{background:rgba(79,163,255,0.15);color:var(--get);}
+  .method-tag.POST{background:rgba(61,220,151,0.15);color:var(--post);}
+  .method-tag.PUT{background:rgba(245,185,66,0.15);color:var(--put);}
+  .endpoint-path{color:var(--text-dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .endpoint-btn.active .endpoint-path{color:var(--text);}
+
+  section.workspace{
+    overflow-y:auto;
+    padding:24px 32px;
+  }
+  .empty-state{
+    color:var(--text-dim);
+    padding-top:60px;
+    text-align:center;
+  }
+  .req-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:4px;
+  }
+  .req-title{font-size:16px;color:var(--text);font-weight:600;}
+  .req-desc{color:var(--text-dim);margin-bottom:20px;font-size:12px;}
+  .field-row{
+    display:grid;
+    grid-template-columns:170px 1fr;
+    gap:12px;
+    align-items:start;
+    margin-bottom:10px;
+  }
+  .field-row label{
+    color:var(--text-dim);
+    padding-top:8px;
+    font-size:12px;
+  }
+  .field-row .req-star{color:var(--danger);}
+  .field-row input, .field-row select, .field-row textarea{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:12px;
+    width:100%;
+  }
+  .field-row textarea{min-height:70px;resize:vertical;}
+  .field-row input:focus, .field-row select:focus, .field-row textarea:focus{outline:none;border-color:var(--accent);}
+  .field-hint{color:var(--text-dim);font-size:10px;margin-top:3px;}
+
+  .send-row{
+    margin-top:18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .send-btn{
+    background:var(--accent);
+    color:#06140d;
+    border:none;
+    padding:10px 22px;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+  }
+  .send-btn:hover{filter:brightness(1.08);}
+  .send-btn:disabled{opacity:0.5;cursor:default;}
+  .url-preview{
+    color:var(--text-dim);
+    font-size:11px;
+    overflow-wrap:anywhere;
+  }
+  .url-preview .m{color:var(--accent);font-weight:700;margin-right:6px;}
+
+  .resp-panel{
+    margin-top:24px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .resp-topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 14px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--border);
+    font-size:11px;
+  }
+  .status-pill{
+    padding:2px 8px;
+    border-radius:10px;
+    font-weight:700;
+    font-size:11px;
+  }
+  .status-pill.ok{background:rgba(61,220,151,0.15);color:var(--accent);}
+  .status-pill.err{background:rgba(255,107,107,0.15);color:var(--danger);}
+  .status-pill.pending{background:rgba(124,139,153,0.15);color:var(--text-dim);}
+  .resp-time{color:var(--text-dim);}
+  pre.resp-body{
+    margin:0;
+    padding:14px;
+    max-height:420px;
+    overflow:auto;
+    background:var(--bg);
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-size:12px;
+  }
+  .key{color:#7dd3fc;}
+  .str{color:#a5e6c6;}
+  .num{color:#f5b942;}
+  .bool{color:#f97583;}
+  .null{color:var(--text-dim);}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="dot"></span>Banking API Console</h1>
+  <div class="base-url-wrap">
+    <label for="baseUrl">Base URL</label>
+    <input id="baseUrl" type="text" value="http://localhost:8082" spellcheck="false">
+  </div>
+  <div class="ping" id="pingBtn">check connection</div>
+</header>
+
+<main>
+  <nav id="nav"></nav>
+  <section class="workspace" id="workspace">
+    <div class="empty-state">← choose an endpoint on the left</div>
+  </section>
+</main>
+
+<script>
+const ENDPOINTS = [
+  {
+    group: "Accounts",
+    items: [
+      { id:"acc-list", method:"GET", path:"/api/accounts", title:"List all accounts", desc:"Returns every account in the system.", params:[] },
+      { id:"acc-get", method:"GET", path:"/api/accounts/{id}", title:"Get account by ID", desc:"Fetch a single account.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"}
+      ]},
+      { id:"acc-txns", method:"GET", path:"/api/accounts/{id}/transactions", title:"Account transactions", desc:"All transactions where this account is the debit account.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"}
+      ]}
+    ]
+  },
+  {
+    group: "Beneficiaries",
+    items: [
+      { id:"ben-list", method:"GET", path:"/api/beneficiaries", title:"List all beneficiaries", desc:"Returns every beneficiary.", params:[] },
+      { id:"ben-create", method:"POST", path:"/api/beneficiaries", title:"Add beneficiary", desc:"Creates a new beneficiary. status defaults to ACTIVE if omitted.", params:[
+        {name:"name", in:"body", type:"text", required:true, placeholder:"Rahul"},
+        {name:"accountNumber", in:"body", type:"text", required:true, placeholder:"9876543210"},
+        {name:"bankName", in:"body", type:"text", required:true, placeholder:"ABC Bank"},
+        {name:"status", in:"body", type:"text", required:false, placeholder:"ACTIVE (optional)"}
+      ]},
+      { id:"ben-update", method:"PUT", path:"/api/beneficiaries/{id}", title:"Update beneficiary", desc:"Updates name / account number / bank name for an existing beneficiary.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"},
+        {name:"name", in:"body", type:"text", required:false, placeholder:"Rahul Sharma"},
+        {name:"accountNumber", in:"body", type:"text", required:false, placeholder:"9876543210"},
+        {name:"bankName", in:"body", type:"text", required:false, placeholder:"ABC Bank"}
+      ]},
+      { id:"ben-status", method:"PUT", path:"/api/beneficiaries/{id}/status", title:"Change beneficiary status", desc:"Sets ACTIVE / INACTIVE (or any status string) via a query param.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"},
+        {name:"status", in:"query", type:"text", required:true, placeholder:"INACTIVE"}
+      ]}
+    ]
+  },
+  {
+    group: "Transactions",
+    items: [
+      { id:"txn-create", method:"POST", path:"/api/transactions", title:"Create fund transfer", desc:"Maker submits a transfer. makerId is a query param; the rest is the JSON body.", params:[
+        {name:"makerId", in:"query", type:"number", required:true, placeholder:"1"},
+        {name:"debitAccountId", in:"body", type:"number", required:true, placeholder:"1"},
+        {name:"beneficiaryId", in:"body", type:"number", required:true, placeholder:"1"},
+        {name:"amount", in:"body", type:"number", required:true, placeholder:"5000"}
+      ]},
+      { id:"txn-get", method:"GET", path:"/api/transactions/{id}", title:"Get transaction by ID", desc:"Fetch a single transaction.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"}
+      ]},
+      { id:"txn-maker", method:"GET", path:"/api/transactions/maker/{makerId}", title:"Transactions by maker", desc:"All transactions created by a given maker.", params:[
+        {name:"makerId", in:"path", type:"number", required:true, placeholder:"1"}
+      ]},
+      { id:"txn-pending", method:"GET", path:"/api/transactions/pending", title:"Pending approval transactions", desc:"All transactions currently awaiting a checker's decision.", params:[] },
+      { id:"txn-approve", method:"PUT", path:"/api/transactions/{id}/approve", title:"Approve transaction", desc:"Checker approves — debits the account and moves the transaction to SUCCESS.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"},
+        {name:"checkerId", in:"body", type:"number", required:true, placeholder:"3"}
+      ]},
+      { id:"txn-reject", method:"PUT", path:"/api/transactions/{id}/reject", title:"Reject transaction", desc:"Checker rejects — releases the held funds back to available balance.", params:[
+        {name:"id", in:"path", type:"number", required:true, placeholder:"1"},
+        {name:"checkerId", in:"body", type:"number", required:true, placeholder:"3"},
+        {name:"rejectionReason", in:"body", type:"text", required:true, placeholder:"Suspicious amount"}
+      ]},
+      { id:"txn-history", method:"GET", path:"/api/transactions/history", title:"Transaction history", desc:"Optionally filter by status or transactionId (both optional query params).", params:[
+        {name:"status", in:"query", type:"text", required:false, placeholder:"SUCCESS (optional)"},
+        {name:"transactionId", in:"query", type:"text", required:false, placeholder:"TXNAB12CD34 (optional)"}
+      ]}
+    ]
+  }
+];
+
+let currentEndpoint = null;
+
+function buildNav(){
+  const nav = document.getElementById("nav");
+  nav.innerHTML = "";
+  ENDPOINTS.forEach(group => {
+    const gt = document.createElement("div");
+    gt.className = "group-title";
+    gt.textContent = group.group;
+    nav.appendChild(gt);
+    group.items.forEach(ep => {
+      const btn = document.createElement("button");
+      btn.className = "endpoint-btn";
+      btn.id = "nav-" + ep.id;
+      btn.innerHTML = `<span class="method-tag ${ep.method}">${ep.method}</span><span class="endpoint-path">${ep.path}</span>`;
+      btn.onclick = () => selectEndpoint(ep.id);
+      nav.appendChild(btn);
+    });
+  });
+}
+
+function findEndpoint(id){
+  for (const g of ENDPOINTS) for (const e of g.items) if (e.id === id) return e;
+  return null;
+}
+
+function selectEndpoint(id){
+  currentEndpoint = findEndpoint(id);
+  document.querySelectorAll(".endpoint-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("nav-" + id).classList.add("active");
+  renderWorkspace();
+}
+
+function renderWorkspace(){
+  const ep = currentEndpoint;
+  const ws = document.getElementById("workspace");
+  const pathParams = ep.params.filter(p => p.in === "path");
+  const queryParams = ep.params.filter(p => p.in === "query");
+  const bodyParams = ep.params.filter(p => p.in === "body");
+
+  let fieldsHtml = "";
+  ep.params.forEach(p => {
+    const star = p.required ? '<span class="req-star"> *</span>' : "";
+    const tagLabel = p.in === "path" ? "path" : p.in === "query" ? "query" : "body";
+    fieldsHtml += `
+      <div class="field-row">
+        <label for="f-${p.name}">${p.name}${star}<div class="field-hint">${tagLabel}</div></label>
+        <div>
+          <input id="f-${p.name}" type="${p.type === 'number' ? 'number' : 'text'}" placeholder="${p.placeholder || ''}" data-required="${p.required}">
+        </div>
+      </div>`;
+  });
+
+  ws.innerHTML = `
+    <div class="req-header">
+      <span class="method-tag ${ep.method}">${ep.method}</span>
+      <span class="req-title">${ep.title}</span>
+    </div>
+    <div class="req-desc">${ep.desc}</div>
+    ${fieldsHtml || '<div class="field-hint" style="margin-bottom:16px;">No parameters required.</div>'}
+    <div class="send-row">
+      <button class="send-btn" id="sendBtn">SEND ▸</button>
+      <div class="url-preview" id="urlPreview"></div>
+    </div>
+    <div class="resp-panel" id="respPanel" style="display:none;">
+      <div class="resp-topbar">
+        <span class="status-pill pending" id="statusPill">—</span>
+        <span class="resp-time" id="respTime"></span>
+      </div>
+      <pre class="resp-body" id="respBody"></pre>
+    </div>
+  `;
+
+  updateUrlPreview();
+  ep.params.forEach(p => {
+    document.getElementById("f-" + p.name).addEventListener("input", updateUrlPreview);
+  });
+  document.getElementById("sendBtn").onclick = sendRequest;
+}
+
+function getBaseUrl(){
+  return document.getElementById("baseUrl").value.replace(/\/+$/, "");
+}
+
+function buildRequestParts(){
+  const ep = currentEndpoint;
+  let path = ep.path;
+  const query = [];
+  const body = {};
+  const missing = [];
+
+  ep.params.forEach(p => {
+    const el = document.getElementById("f-" + p.name);
+    const val = el ? el.value.trim() : "";
+    if (p.required && !val) missing.push(p.name);
+    if (!val) return;
+    if (p.in === "path") path = path.replace("{" + p.name + "}", encodeURIComponent(val));
+    else if (p.in === "query") query.push(`${encodeURIComponent(p.name)}=${encodeURIComponent(val)}`);
+    else if (p.in === "body") body[p.name] = p.type === "number" ? Number(val) : val;
+  });
+
+  const url = getBaseUrl() + path + (query.length ? "?" + query.join("&") : "");
+  const hasBody = ep.params.some(p => p.in === "body");
+  return { url, body: hasBody ? body : null, missing };
+}
+
+function updateUrlPreview(){
+  const { url } = buildRequestParts();
+  document.getElementById("urlPreview").innerHTML =
+    `<span class="m">${currentEndpoint.method}</span>${url}`;
+}
+
+function syntaxHighlight(json){
+  const str = JSON.stringify(json, null, 2);
+  return str
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+      match => {
+        let cls = "num";
+        if (/^"/.test(match)) cls = /:$/.test(match) ? "key" : "str";
+        else if (/true|false/.test(match)) cls = "bool";
+        else if (/null/.test(match)) cls = "null";
+        return `<span class="${cls}">${match}</span>`;
+      });
+}
+
+async function sendRequest(){
+  const ep = currentEndpoint;
+  const { url, body, missing } = buildRequestParts();
+  const respPanel = document.getElementById("respPanel");
+  const statusPill = document.getElementById("statusPill");
+  const respTime = document.getElementById("respTime");
+  const respBody = document.getElementById("respBody");
+  const sendBtn = document.getElementById("sendBtn");
+
+  respPanel.style.display = "block";
+
+  if (missing.length){
+    statusPill.textContent = "MISSING FIELDS";
+    statusPill.className = "status-pill err";
+    respTime.textContent = "";
+    respBody.innerHTML = `Required field(s) not filled: ${missing.join(", ")}`;
+    return;
+  }
+
+  sendBtn.disabled = true;
+  statusPill.textContent = "SENDING…";
+  statusPill.className = "status-pill pending";
+  respTime.textContent = "";
+  respBody.textContent = "";
+
+  const started = performance.now();
+  try {
+    const opts = { method: ep.method, headers: {} };
+    if (body){
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, opts);
+    const elapsed = Math.round(performance.now() - started);
+    let data;
+    const text = await res.text();
+    try { data = JSON.parse(text); } catch { data = text; }
+
+    statusPill.textContent = `${res.status} ${res.statusText}`;
+    statusPill.className = "status-pill " + (res.ok ? "ok" : "err");
+    respTime.textContent = `${elapsed} ms`;
+    respBody.innerHTML = typeof data === "object" ? syntaxHighlight(data) : (data || "(empty response)");
+  } catch (err){
+    const elapsed = Math.round(performance.now() - started);
+    statusPill.textContent = "NETWORK ERROR";
+    statusPill.className = "status-pill err";
+    respTime.textContent = `${elapsed} ms`;
+    respBody.textContent = String(err) + "\n\nIs the backend running, and does it allow CORS from this page's origin?";
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+document.getElementById("pingBtn").onclick = async () => {
+  const pingBtn = document.getElementById("pingBtn");
+  const original = pingBtn.textContent;
+  pingBtn.textContent = "checking…";
+  try {
+    const res = await fetch(getBaseUrl() + "/api/accounts");
+    pingBtn.textContent = res.ok ? "✓ reachable" : `✗ HTTP ${res.status}`;
+  } catch {
+    pingBtn.textContent = "✗ unreachable";
+  }
+  setTimeout(() => pingBtn.textContent = original, 2500);
+};
+
+buildNav();
+</script>
+
+</body>
+</html>
